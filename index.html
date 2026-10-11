@@ -1,0 +1,2230 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SIMPAT - Sistem Absensi Satpam SMAN 1 Manonjaya</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              navy: '#0B192C',
+              dark: '#1E3E62',
+              gold: '#D4AF37',
+              goldLight: '#F3E5AB',
+              accent: '#002B5B'
+            },
+            status: {
+              success: '#10B981',
+              danger: '#EF4444',
+              warning: '#F59E0B',
+              info: '#3B82F6'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- SheetJS (Excel Export) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <!-- jsPDF & AutoTable -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+  <style>
+    /* Styling scrollbar & kamera feed */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .video-preview { transform: scaleX(-1); object-fit: cover; }
+    .bottom-nav-active { color: #D4AF37; font-weight: bold; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col select-none antialiased">
+
+  <!-- ==================== HEADER APLIKASI ==================== -->
+  <header class="bg-brand-navy text-white sticky top-0 z-40 shadow-md border-b-2 border-brand-gold">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-full bg-brand-gold flex items-center justify-center text-brand-navy font-bold text-xl shadow">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold tracking-tight flex items-center gap-2">
+            SIMPAT <span class="text-xs bg-brand-gold text-brand-navy px-1.5 py-0.5 rounded font-extrabold hidden sm:inline">SMAN 1 MANONJAYA</span>
+          </h1>
+          <p class="text-xs text-slate-300 hidden sm:block">Sistem Absensi & Operasional Satpam (NPSN: 20210741)</p>
+        </div>
+      </div>
+      
+      <!-- Right Header / User Quick Info -->
+      <div id="headerUserNav" class="hidden flex items-center space-x-3">
+        <div class="text-right hidden sm:block">
+          <p id="navUserName" class="text-xs font-semibold text-white"></p>
+          <span id="navUserRole" class="text-[10px] text-brand-gold uppercase tracking-wider font-bold"></span>
+        </div>
+        <button onclick="logoutAction()" class="bg-red-600/80 hover:bg-red-600 text-white px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-1 transition">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          <span class="hidden sm:inline">Keluar</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== HALAMAN LOGIN ==================== -->
+  <main id="loginView" class="flex-1 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200">
+      <div class="bg-gradient-to-r from-brand-navy to-brand-dark p-6 text-center text-white relative">
+        <div class="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-3 border-2 border-brand-gold">
+          <i class="fa-solid fa-shield-cat text-3xl text-brand-gold"></i>
+        </div>
+        <h2 class="text-xl font-bold tracking-wide">MASUK KE SISTEM</h2>
+        <p class="text-xs text-slate-300 mt-1">SMAN 1 Manonjaya - Tasikmalaya</p>
+      </div>
+
+      <form id="loginForm" onsubmit="handleLogin(event)" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Username / NIP / NIK</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400"><i class="fa-solid fa-user"></i></span>
+            <input type="text" id="loginUsername" required class="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-gold focus:outline-none" placeholder="Masukkan ID pengguna">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Kata Sandi</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400"><i class="fa-solid fa-lock"></i></span>
+            <input type="password" id="loginPassword" required class="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-gold focus:outline-none" placeholder="••••••••">
+          </div>
+        </div>
+
+        <button type="submit" class="w-full bg-brand-navy hover:bg-brand-dark text-white font-bold py-3 rounded-lg shadow-md transition duration-200 flex items-center justify-center gap-2">
+          <span>Masuk Sekarang</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+
+        <div class="pt-4 border-t border-slate-200 text-center">
+          <p class="text-xs text-slate-500 font-semibold mb-2">Akun Demo Cepat:</p>
+          <div class="grid grid-cols-3 gap-1.5 text-[11px]">
+            <button type="button" onclick="quickFill('admin', 'admin123')" class="bg-slate-100 hover:bg-slate-200 py-1.5 rounded border border-slate-300">Admin</button>
+            <button type="button" onclick="quickFill('satpam1', 'satpam123')" class="bg-slate-100 hover:bg-slate-200 py-1.5 rounded border border-slate-300">Satpam</button>
+            <button type="button" onclick="quickFill('kepsek', 'kepsek123')" class="bg-slate-100 hover:bg-slate-200 py-1.5 rounded border border-slate-300">Kepsek</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <!-- ==================== MAIN PORTAL APLIKASI ==================== -->
+  <div id="appPortal" class="flex-1 flex flex-col hidden">
+    <!-- Desktop Navigation Bar -->
+    <nav class="bg-brand-dark text-slate-200 text-sm hidden md:block shadow-inner">
+      <div class="max-w-7xl mx-auto px-4 flex space-x-1 overflow-x-auto py-1.5" id="desktopNavLinks">
+        <!-- Rendered based on user role -->
+      </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="max-w-7xl mx-auto px-4 py-6 w-full flex-1">
+      
+      <!-- VIEW: DASHBOARD (ADMIN & KEPSEK) -->
+      <section id="viewDashboard" class="space-y-6 hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-2">
+          <div>
+            <h2 class="text-xl sm:text-2xl font-bold text-brand-navy">Monitoring & Dashboard Satpam</h2>
+            <p class="text-xs text-slate-500" id="dashTodayDate"></p>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="exportAttendanceXLSX()" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs px-3 py-2 rounded shadow flex items-center gap-1.5 font-medium">
+              <i class="fa-solid fa-file-excel"></i> Export Excel
+            </button>
+            <button onclick="exportAttendancePDF()" class="bg-red-700 hover:bg-red-800 text-white text-xs px-3 py-2 rounded shadow flex items-center gap-1.5 font-medium">
+              <i class="fa-solid fa-file-pdf"></i> Export PDF
+            </button>
+          </div>
+        </div>
+
+        <!-- Metric Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm text-center">
+            <span class="text-xs text-slate-500 font-bold block">TOTAL SATPAM</span>
+            <span id="metricTotalSatpam" class="text-2xl font-black text-brand-navy">0</span>
+          </div>
+          <div class="bg-white p-3.5 rounded-xl border border-emerald-200 shadow-sm text-center">
+            <span class="text-xs text-emerald-600 font-bold block">HADIR HARI INI</span>
+            <span id="metricHadir" class="text-2xl font-black text-status-success">0</span>
+          </div>
+          <div class="bg-white p-3.5 rounded-xl border border-amber-200 shadow-sm text-center">
+            <span class="text-xs text-amber-600 font-bold block">TERLAMBAT</span>
+            <span id="metricTerlambat" class="text-2xl font-black text-status-warning">0</span>
+          </div>
+          <div class="bg-white p-3.5 rounded-xl border border-blue-200 shadow-sm text-center">
+            <span class="text-xs text-blue-600 font-bold block">IZIN / SAKIT</span>
+            <span id="metricIzin" class="text-2xl font-black text-status-info">0</span>
+          </div>
+          <div class="bg-white p-3.5 rounded-xl border border-red-200 shadow-sm text-center">
+            <span class="text-xs text-red-600 font-bold block">TIDAK HADIR</span>
+            <span id="metricAlpa" class="text-2xl font-black text-status-danger">0</span>
+          </div>
+          <div class="bg-white p-3.5 rounded-xl border border-purple-200 shadow-sm text-center">
+            <span class="text-xs text-purple-600 font-bold block">BELUM PULANG</span>
+            <span id="metricBelumPulang" class="text-2xl font-black text-purple-600">0</span>
+          </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm lg:col-span-2">
+            <h3 class="text-sm font-bold text-brand-navy mb-2 flex items-center justify-between">
+              <span>Tren Kehadiran Mingguan</span>
+              <span class="text-[10px] text-slate-400 font-normal">7 Hari Terakhir</span>
+            </h3>
+            <div class="h-64">
+              <canvas id="attendanceTrendChart"></canvas>
+            </div>
+          </div>
+          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+            <h3 class="text-sm font-bold text-brand-navy mb-2">Distribusi Status Hari Ini</h3>
+            <div class="h-64 flex items-center justify-center">
+              <canvas id="attendanceStatusChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Status Table -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="px-4 py-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+            <h3 class="text-sm font-bold text-brand-navy">Monitoring Kehadiran Realtime</h3>
+            <span class="text-xs text-slate-500">Auto-refresh aktif</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead class="bg-slate-100 text-slate-600 font-bold">
+                <tr>
+                  <th class="p-3">Satpam</th>
+                  <th class="p-3">Shift</th>
+                  <th class="p-3">Jam Masuk</th>
+                  <th class="p-3">Jam Pulang</th>
+                  <th class="p-3">Status</th>
+                  <th class="p-3">Keterlambatan</th>
+                  <th class="p-3">Foto</th>
+                </tr>
+              </thead>
+              <tbody id="dashboardLiveTableBody" class="divide-y divide-slate-100">
+                <!-- Injected via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: PORTAL SATPAM (MOBILE FIRST) -->
+      <section id="viewSatpamHome" class="space-y-5 hidden max-w-xl mx-auto">
+        <!-- Greetings Card -->
+        <div class="bg-gradient-to-br from-brand-navy via-brand-dark to-slate-900 text-white rounded-2xl p-5 shadow-lg border border-brand-gold/30">
+          <div class="flex items-center space-x-3.5 mb-3">
+            <div class="w-12 h-12 rounded-full bg-brand-gold/20 border-2 border-brand-gold flex items-center justify-center text-brand-gold text-xl font-bold">
+              <i class="fa-solid fa-user-shield"></i>
+            </div>
+            <div>
+              <p class="text-xs text-slate-300">Selamat Bertugas,</p>
+              <h2 id="satpamHeroName" class="text-base font-bold tracking-tight"></h2>
+              <span id="satpamHeroShift" class="text-[11px] bg-brand-gold text-brand-navy font-black px-2 py-0.5 rounded-full inline-block mt-0.5">Shift Pagi (06.30 - 14.30)</span>
+            </div>
+          </div>
+          <div class="bg-black/30 rounded-xl p-3 text-center border border-white/5">
+            <p id="liveDigitalClock" class="text-3xl font-mono font-extrabold text-amber-300">00:00:00</p>
+            <p id="liveDigitalDate" class="text-xs text-slate-300 mt-0.5"></p>
+          </div>
+        </div>
+
+        <!-- Big Punch Buttons -->
+        <div class="grid grid-cols-2 gap-3">
+          <button onclick="openAttendanceModal('MASUK')" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white p-4 rounded-2xl shadow-lg flex flex-col items-center justify-center transition border border-emerald-400/40">
+            <div class="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-2xl mb-1.5">
+              <i class="fa-solid fa-right-to-bracket"></i>
+            </div>
+            <span class="font-extrabold text-sm sm:text-base tracking-wide">ABSEN MASUK</span>
+            <span class="text-[10px] text-emerald-100">Kamera & GPS</span>
+          </button>
+
+          <button onclick="openAttendanceModal('PULANG')" class="bg-rose-600 hover:bg-rose-700 active:scale-95 text-white p-4 rounded-2xl shadow-lg flex flex-col items-center justify-center transition border border-rose-400/40">
+            <div class="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-2xl mb-1.5">
+              <i class="fa-solid fa-right-from-bracket"></i>
+            </div>
+            <span class="font-extrabold text-sm sm:text-base tracking-wide">ABSEN PULANG</span>
+            <span class="text-[10px] text-rose-100">Akhiri Giliran Tugas</span>
+          </button>
+        </div>
+
+        <!-- Shortcut Action Grid -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Layanan Cepat Satpam</h3>
+          <div class="grid grid-cols-4 gap-2 text-center text-xs">
+            <button onclick="switchView('viewJurnal')" class="flex flex-col items-center p-2 rounded-xl hover:bg-slate-50 transition">
+              <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-base mb-1">
+                <i class="fa-solid fa-book-open"></i>
+              </div>
+              <span class="text-[11px] font-medium text-slate-700">Jurnal</span>
+            </button>
+            <button onclick="switchView('viewHandover')" class="flex flex-col items-center p-2 rounded-xl hover:bg-slate-50 transition">
+              <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center text-base mb-1">
+                <i class="fa-solid fa-repeat"></i>
+              </div>
+              <span class="text-[11px] font-medium text-slate-700">Serah Tugas</span>
+            </button>
+            <button onclick="switchView('viewIncident')" class="flex flex-col items-center p-2 rounded-xl hover:bg-slate-50 transition">
+              <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-base mb-1">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+              </div>
+              <span class="text-[11px] font-medium text-slate-700">Kejadian</span>
+            </button>
+            <button onclick="switchView('viewIzin')" class="flex flex-col items-center p-2 rounded-xl hover:bg-slate-50 transition">
+              <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center text-base mb-1">
+                <i class="fa-solid fa-envelope-open-text"></i>
+              </div>
+              <span class="text-[11px] font-medium text-slate-700">Izin/Cuti</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Today's Personal Status Card -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+          <h3 class="text-xs font-bold text-slate-700 uppercase mb-2">Status Hari Ini</h3>
+          <div id="satpamTodayStatusBox" class="text-xs space-y-2">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: DATA SATPAM (ADMIN ONLY) -->
+      <section id="viewDataSatpam" class="space-y-4 hidden">
+        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+          <div>
+            <h2 class="text-xl font-bold text-brand-navy">Manajemen Personel Satpam</h2>
+            <p class="text-xs text-slate-500">Kelola master data petugas keamanan SMAN 1 Manonjaya</p>
+          </div>
+          <button onclick="openModalSatpamForm()" class="bg-brand-navy hover:bg-brand-dark text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-2 self-start shadow">
+            <i class="fa-solid fa-user-plus"></i> Tambah Satpam
+          </button>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden p-4">
+          <div class="flex flex-col sm:flex-row gap-2 mb-4 justify-between">
+            <input type="text" id="searchSatpamInput" oninput="renderSatpamTable()" placeholder="Cari nama atau NIK..." class="border border-slate-300 rounded-lg px-3 py-1.5 text-xs w-full sm:w-64 focus:outline-none focus:ring-1 focus:ring-brand-gold">
+            <select id="filterShiftSatpam" onchange="renderSatpamTable()" class="border border-slate-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none">
+              <option value="">Semua Shift</option>
+              <option value="Pagi">Shift Pagi</option>
+              <option value="Siang">Shift Siang</option>
+              <option value="Malam">Shift Malam</option>
+            </select>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead class="bg-slate-100 text-slate-600 font-bold border-b">
+                <tr>
+                  <th class="p-2.5">ID / NIP</th>
+                  <th class="p-2.5">Nama Personel</th>
+                  <th class="p-2.5">Kontak</th>
+                  <th class="p-2.5">Alamat</th>
+                  <th class="p-2.5">Shift Rutin</th>
+                  <th class="p-2.5">Status</th>
+                  <th class="p-2.5 text-center">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="satpamTableBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: JADWAL PIKET (ADMIN / SATPAM) -->
+      <section id="viewJadwal" class="space-y-4 hidden">
+        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+          <div>
+            <h2 class="text-xl font-bold text-brand-navy">Jadwal Penugasan & Shift</h2>
+            <p class="text-xs text-slate-500">Penetapan jadwal operasional pos satpam</p>
+          </div>
+          <button id="btnTambahJadwal" onclick="openModalJadwalForm()" class="bg-brand-navy hover:bg-brand-dark text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-2 self-start shadow">
+            <i class="fa-solid fa-calendar-plus"></i> Atur Jadwal
+          </button>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-100 text-slate-600 font-bold">
+                <tr>
+                  <th class="p-3">Tanggal</th>
+                  <th class="p-3">Nama Satpam</th>
+                  <th class="p-3">Shift</th>
+                  <th class="p-3">Jam Kerja</th>
+                  <th class="p-3">Keterangan</th>
+                  <th class="p-3 text-center" id="colAksiJadwal">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="jadwalTableBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: JURNAL KEGIATAN -->
+      <section id="viewJurnal" class="space-y-4 hidden">
+        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+          <div>
+            <h2 class="text-xl font-bold text-brand-navy">Jurnal Kegiatan Harian</h2>
+            <p class="text-xs text-slate-500">Catatan patroli, pengecekan gerbang, dan pemantauan lingkungan sekolah</p>
+          </div>
+          <button onclick="openModalJurnalForm()" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-2 self-start shadow">
+            <i class="fa-solid fa-pen-to-square"></i> Buat Jurnal Baru
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="jurnalCardContainer">
+          <!-- Injected via JS -->
+        </div>
+      </section>
+
+      <!-- VIEW: LAPORAN KEJADIAN -->
+      <section id="viewIncident" class="space-y-4 hidden">
+        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+          <div>
+            <h2 class="text-xl font-bold text-brand-navy">Laporan Kejadian & Insiden</h2>
+            <p class="text-xs text-slate-500">Pencatatan gangguan ketertiban, kerusakan sarana, tamu mencurigakan, atau konflik</p>
+          </div>
+          <button onclick="openModalIncidentForm()" class="bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-2 self-start shadow">
+            <i class="fa-solid fa-bullhorn"></i> Laporkan Kejadian
+          </button>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-100 text-slate-600 font-bold">
+                <tr>
+                  <th class="p-3">Waktu</th>
+                  <th class="p-3">Kategori</th>
+                  <th class="p-3">Lokasi</th>
+                  <th class="p-3">Kronologi & Tindakan</th>
+                  <th class="p-3">Pelapor</th>
+                  <th class="p-3">Status</th>
+                </tr>
+              </thead>
+              <tbody id="incidentTableBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: SERAH TERIMA SHIFT -->
+      <section id="viewHandover" class="space-y-4 hidden">
+        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+          <div>
+            <h2 class="text-xl font-bold text-brand-navy">Serah Terima Giliran (Handover)</h2>
+            <p class="text-xs text-slate-500">Transisi inventaris, kunci pos, HT, dan situasi keamanan antar shift</p>
+          </div>
+          <button onclick="openModalHandoverForm()" class="bg-purple-600 hover:bg-purple-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-2 self-start shadow">
+            <i class="fa-solid fa-handshake"></i> Catat Serah Terima
+          </button>
+        </div>
+
+        <div class="space-y-3" id="handoverListContainer">
+          <!-- Injected via JS -->
+        </div>
+      </section>
+
+      <!-- VIEW: PENGAJUAN IZIN / SAKIT / CUTI -->
+      <section id="viewIzin" class="space-y-4 hidden">
+        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+          <div>
+            <h2 class="text-xl font-bold text-brand-navy">Pengajuan Izin & Sakit</h2>
+            <p class="text-xs text-slate-500">Permohonan dispensasi dinas, izin keperluan keluarga, atau surat sakit</p>
+          </div>
+          <button onclick="openModalIzinForm()" class="bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-2 self-start shadow">
+            <i class="fa-solid fa-file-signature"></i> Ajukan Izin / Sakit
+          </button>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-100 text-slate-600 font-bold">
+                <tr>
+                  <th class="p-3">Personel</th>
+                  <th class="p-3">Jenis</th>
+                  <th class="p-3">Periode</th>
+                  <th class="p-3">Alasan</th>
+                  <th class="p-3">Status</th>
+                  <th class="p-3 text-center" id="colAksiIzin">Aksi Keputusan</th>
+                </tr>
+              </thead>
+              <tbody id="izinTableBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: REKAP ABSENSI LENGKAP -->
+      <section id="viewRekap" class="space-y-4 hidden">
+        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+          <div>
+            <h2 class="text-xl font-bold text-brand-navy">Rekapitulasi Absensi Lengkap</h2>
+            <p class="text-xs text-slate-500">Histori terpadu, koreksi jam masuk/pulang, dan bukti presensi</p>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="exportAttendanceXLSX()" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs px-3 py-1.5 rounded shadow font-medium">Excel</button>
+            <button onclick="exportAttendancePDF()" class="bg-red-700 hover:bg-red-800 text-white text-xs px-3 py-1.5 rounded shadow font-medium">PDF</button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-4 text-xs">
+            <input type="date" id="filterRekapTanggal" onchange="renderRekapTable()" class="border border-slate-300 rounded p-1.5">
+            <select id="filterRekapStatus" onchange="renderRekapTable()" class="border border-slate-300 rounded p-1.5">
+              <option value="">Semua Status</option>
+              <option value="HADIR">Hadir Tepat Waktu</option>
+              <option value="TERLAMBAT">Terlambat</option>
+              <option value="IZIN">Izin</option>
+              <option value="SAKIT">Sakit</option>
+              <option value="TIDAK HADIR">Tidak Hadir</option>
+            </select>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-100 text-slate-600 font-bold">
+                <tr>
+                  <th class="p-2.5">Tanggal</th>
+                  <th class="p-2.5">Nama Satpam</th>
+                  <th class="p-2.5">Shift</th>
+                  <th class="p-2.5">Masuk</th>
+                  <th class="p-2.5">Pulang</th>
+                  <th class="p-2.5">Status</th>
+                  <th class="p-2.5">Keterlambatan</th>
+                  <th class="p-2.5">Bukti Foto</th>
+                  <th class="p-2.5 text-center" id="colAksiRekap">Koreksi</th>
+                </tr>
+              </thead>
+              <tbody id="rekapTableBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: PENGATURAN & AUDIT LOG (ADMIN ONLY) -->
+      <section id="viewSettings" class="space-y-6 hidden">
+        <h2 class="text-xl font-bold text-brand-navy">Konfigurasi Aturan & Keamanan Sistem</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Konfigurasi Geolocation -->
+          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+            <h3 class="text-sm font-bold text-brand-navy flex items-center gap-2">
+              <i class="fa-solid fa-location-dot text-brand-gold"></i> Parameter Geolocation GPS
+            </h3>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Koordinat Titik Tengah Sekolah (Latitude, Longitude)</label>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <input type="text" id="cfgLat" value="-7.347611" class="border p-2 rounded">
+                <input type="text" id="cfgLng" value="108.301668" class="border p-2 rounded">
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Radius Toleransi Presensi (Meter)</label>
+              <input type="number" id="cfgRadius" value="100" class="w-full border p-2 rounded text-xs">
+            </div>
+            <div class="flex items-center gap-2 pt-2">
+              <input type="checkbox" id="cfgGeoEnabled" checked class="w-4 h-4 text-brand-navy">
+              <label for="cfgGeoEnabled" class="text-xs font-medium text-slate-700">Wajibkan Verifikasi Radius Lokasi</label>
+            </div>
+            <button onclick="saveGeoConfig()" class="bg-brand-navy text-white text-xs px-3 py-2 rounded font-bold hover:bg-brand-dark">Simpan Konfigurasi GPS</button>
+          </div>
+
+          <!-- Konfigurasi Jam Kerja -->
+          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+            <h3 class="text-sm font-bold text-brand-navy flex items-center gap-2">
+              <i class="fa-solid fa-clock text-brand-gold"></i> Aturan Shift & Toleransi
+            </h3>
+            <div class="space-y-2 text-xs">
+              <div class="flex justify-between items-center p-2 bg-slate-50 rounded">
+                <span class="font-bold">Shift Pagi</span>
+                <span>06:30 - 14:30 (Toleransi: 30 Mnt)</span>
+              </div>
+              <div class="flex justify-between items-center p-2 bg-slate-50 rounded">
+                <span class="font-bold">Shift Siang</span>
+                <span>14:00 - 22:00 (Toleransi: 15 Mnt)</span>
+              </div>
+              <div class="flex justify-between items-center p-2 bg-slate-50 rounded">
+                <span class="font-bold">Shift Malam</span>
+                <span>22:00 - 06:30 (Toleransi: 15 Mnt)</span>
+              </div>
+            </div>
+            <p class="text-[11px] text-slate-500 italic">*Setelan jam kerja otomatis dikonversi saat pencatatan keterlambatan.</p>
+          </div>
+        </div>
+
+        <!-- Audit Trail / Security Log -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+          <h3 class="text-sm font-bold text-brand-navy mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-shield-virus text-emerald-600"></i> Audit Log Transaksi & Koreksi
+          </h3>
+          <div class="overflow-x-auto max-h-60 overflow-y-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-100 text-slate-600 font-bold sticky top-0">
+                <tr>
+                  <th class="p-2">Timestamp</th>
+                  <th class="p-2">Pengguna</th>
+                  <th class="p-2">Aktivitas</th>
+                  <th class="p-2">Rincian Perubahan</th>
+                </tr>
+              </thead>
+              <tbody id="auditTableBody" class="divide-y divide-slate-100 font-mono text-[11px]"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ==================== MOBILE BOTTOM NAVIGATION ==================== -->
+    <footer class="bg-white border-t border-slate-200 sticky bottom-0 z-40 md:hidden py-1">
+      <div class="grid grid-cols-5 text-center text-[10px]" id="mobileBottomNav">
+        <!-- Injected dynamically based on role -->
+      </div>
+    </footer>
+  </div>
+
+  <!-- ==================== MODAL ABSENSI DENGAN KAMERA & GPS ==================== -->
+  <div id="modalAttendance" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+    <div class="bg-white rounded-2xl max-w-sm w-full overflow-hidden shadow-2xl animate-fade-in">
+      <div class="bg-brand-navy text-white px-4 py-3 flex justify-between items-center">
+        <h3 id="modalAttendanceTitle" class="text-sm font-bold tracking-wide">Perekaman Absensi</h3>
+        <button onclick="closeAttendanceModal()" class="text-slate-300 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <div class="p-4 space-y-3">
+        <!-- Camera Frame -->
+        <div class="relative bg-black rounded-xl overflow-hidden aspect-square flex items-center justify-center border border-slate-300">
+          <video id="webcamVideo" autoplay playsinline class="video-preview w-full h-full object-cover hidden"></video>
+          <canvas id="photoCanvas" class="w-full h-full object-cover hidden"></canvas>
+          <img id="photoCapturedImg" class="w-full h-full object-cover hidden" alt="Selfie">
+          
+          <div id="camPlaceholder" class="text-center text-slate-400 p-4">
+            <i class="fa-solid fa-camera text-4xl mb-2 text-slate-500"></i>
+            <p class="text-xs">Kamera siap diaktifkan</p>
+          </div>
+
+          <div id="camLoadingSpinner" class="hidden absolute inset-0 bg-black/50 flex items-center justify-center text-white text-xs gap-2">
+            <i class="fa-solid fa-circle-notch fa-spin text-xl text-brand-gold"></i>
+            <span>Mengakses Sensor...</span>
+          </div>
+        </div>
+
+        <!-- Camera Controls -->
+        <div class="flex gap-2">
+          <button id="btnStartCam" onclick="startCamera()" class="flex-1 bg-slate-800 text-white py-2 rounded-lg text-xs font-bold hover:bg-slate-700">
+            <i class="fa-solid fa-video mr-1"></i> Buka Kamera
+          </button>
+          <button id="btnSnapPhoto" onclick="capturePhoto()" class="flex-1 bg-brand-gold text-brand-navy py-2 rounded-lg text-xs font-black hover:bg-yellow-400 hidden">
+            <i class="fa-solid fa-camera mr-1"></i> Jepret Foto
+          </button>
+        </div>
+
+        <!-- Location Status Indicator -->
+        <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-bold text-slate-700"><i class="fa-solid fa-location-crosshairs text-blue-600 mr-1"></i> Validasi GPS</span>
+            <span id="geoStatusBadge" class="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-bold">Siap</span>
+          </div>
+          <p id="geoDistanceText" class="text-[11px] text-slate-500">Jarak ke Pos Satpam: Menunggu deteksi...</p>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold text-slate-600 mb-1">Keterangan Khusus (Opsional)</label>
+          <input type="text" id="attNoteInput" placeholder="Contoh: Kondisi sehat, serah terima lancar" class="w-full border rounded-lg p-2 text-xs focus:ring-1 focus:ring-brand-gold outline-none">
+        </div>
+
+        <button id="btnSubmitAttendance" onclick="processAttendanceSubmission()" disabled class="w-full bg-slate-300 text-slate-500 py-3 rounded-xl font-extrabold text-sm transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-check"></i> Kirim Presensi Sekarang
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL FORM JURNAL KEGIATAN ==================== -->
+  <div id="modalJurnal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+    <div class="bg-white rounded-2xl max-w-md w-full p-5 space-y-3 shadow-xl">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="text-sm font-bold text-brand-navy">Isi Jurnal Aktivitas Satpam</h3>
+        <button onclick="closeModal('modalJurnal')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="handleJurnalSubmit(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Jenis Aktivitas</label>
+          <select id="jurnalJenis" required class="w-full border p-2 rounded-lg">
+            <option>Pemeriksaan Gerbang Utama</option>
+            <option>Patroli Lingkungan Sekolah & Kelas</option>
+            <option>Pemeriksaan Kendaraan Masuk/Keluar</option>
+            <option>Pengaturan Lalu Lintas Pagi/Sore</option>
+            <option>Pengamanan Kegiatan Sekolah</option>
+            <option>Penerimaan Tamu Kedinasan</option>
+          </select>
+        </div>
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Titik Lokasi</label>
+          <input type="text" id="jurnalLokasi" required placeholder="Pos Utama / Lapangan / Area Parkir Timur" class="w-full border p-2 rounded-lg">
+        </div>
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Uraian Kegiatan & Situasi</label>
+          <textarea id="jurnalUraian" required rows="3" placeholder="Pintu gerbang ditutup pukul 07.15, situasi aman terkendali..." class="w-full border p-2 rounded-lg"></textarea>
+        </div>
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Tindak Lanjut</label>
+          <input type="text" id="jurnalTindakLanjut" placeholder="Melanjutkan patroli area belakang laboratorium" class="w-full border p-2 rounded-lg">
+        </div>
+        <button type="submit" class="w-full bg-brand-navy text-white py-2.5 rounded-lg font-bold">Simpan Jurnal</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL FORM LAPORAN KEJADIAN ==================== -->
+  <div id="modalIncident" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+    <div class="bg-white rounded-2xl max-w-md w-full p-5 space-y-3 shadow-xl">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="text-sm font-bold text-rose-700">Form Laporan Insiden / Kejadian</h3>
+        <button onclick="closeModal('modalIncident')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="handleIncidentSubmit(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Kategori Masalah</label>
+          <select id="incKategori" required class="w-full border p-2 rounded-lg">
+            <option>Pelanggaran Siswa (Lompat Pagar / Bolos)</option>
+            <option>Keamanan / Tamu Mencurigakan</option>
+            <option>Kerusakan Fasilitas / Gerbang</option>
+            <option>Kendaraan Bermasalah</option>
+            <option>Keadaan Darurat / Medis</option>
+            <option>Lainnya</option>
+          </select>
+        </div>
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Lokasi Kejadian</label>
+          <input type="text" id="incLokasi" required placeholder="Belakang Kantin / Parkir Motor Guru" class="w-full border p-2 rounded-lg">
+        </div>
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Kronologi Kejadian</label>
+          <textarea id="incKronologi" required rows="3" placeholder="Jelaskan alur waktu dan kronologi insiden..." class="w-full border p-2 rounded-lg"></textarea>
+        </div>
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Tindakan Langsung Petugas</label>
+          <input type="text" id="incTindakan" required placeholder="Mengamankan oknum & melapor ke Guru Piket" class="w-full border p-2 rounded-lg">
+        </div>
+        <button type="submit" class="w-full bg-rose-600 text-white py-2.5 rounded-lg font-bold">Kirim Laporan Resmi</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL FORM SERAH TERIMA SHIFT ==================== -->
+  <div id="modalHandover" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+    <div class="bg-white rounded-2xl max-w-md w-full p-5 space-y-3 shadow-xl">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="text-sm font-bold text-purple-700">Form Serah Terima Tugas (Handover)</h3>
+        <button onclick="closeModal('modalHandover')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="handleHandoverSubmit(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Petugas Penerima Tugas</label>
+          <select id="handoverPenerima" required class="w-full border p-2 rounded-lg"></select>
+        </div>
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Status Keamanan Pos</label>
+          <select id="handoverKondisi" required class="w-full border p-2 rounded-lg">
+            <option>KONDUSIF & AMAN PENUH</option>
+            <option>PERLU PENGAWASAN TAMBAHAN</option>
+            <option>SIAGA / WASPADA</option>
+          </select>
+        </div>
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Inventaris yang Diserahterimakan</label>
+          <input type="text" id="handoverBarang" value="Kunci Gerbang Utama, 2 Unit HT, Buku Tamu, Lampu Senter" required class="w-full border p-2 rounded-lg">
+        </div>
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Catatan Penting untuk Shift Berikutnya</label>
+          <textarea id="handoverCatatan" required rows="2" placeholder="Pintu lab komputer terkunci, ada tamu alumni izin survey lapangan..." class="w-full border p-2 rounded-lg"></textarea>
+        </div>
+        <button type="submit" class="w-full bg-purple-700 text-white py-2.5 rounded-lg font-bold">Kirim Berita Acara</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL FORM PENGAJUAN IZIN ==================== -->
+  <div id="modalIzin" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+    <div class="bg-white rounded-2xl max-w-md w-full p-5 space-y-3 shadow-xl">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="text-sm font-bold text-amber-700">Form Pengajuan Izin / Sakit / Cuti</h3>
+        <button onclick="closeModal('modalIzin')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="handleIzinSubmit(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Jenis Dispensasi</label>
+          <select id="izinJenis" required class="w-full border p-2 rounded-lg">
+            <option value="IZIN">Izin Keperluan Mendesak</option>
+            <option value="SAKIT">Sakit (Surat Dokter)</option>
+            <option value="CUTI">Cuti Tahunan</option>
+            <option value="DINAS">Tugas Luar / Pengawalan</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="font-bold text-slate-700 block mb-1">Tanggal Mulai</label>
+            <input type="date" id="izinMulai" required class="w-full border p-2 rounded-lg">
+          </div>
+          <div>
+            <label class="font-bold text-slate-700 block mb-1">Tanggal Selesai</label>
+            <input type="date" id="izinSelesai" required class="w-full border p-2 rounded-lg">
+          </div>
+        </div>
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Alasan Terperinci</label>
+          <textarea id="izinAlasan" required rows="3" placeholder="Tuliskan keterangan lengkap..." class="w-full border p-2 rounded-lg"></textarea>
+        </div>
+        <button type="submit" class="w-full bg-amber-600 text-white py-2.5 rounded-lg font-bold">Kirim Permohonan</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL TAMBAH/EDIT SATPAM ==================== -->
+  <div id="modalSatpamForm" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+    <div class="bg-white rounded-2xl max-w-md w-full p-5 space-y-3 shadow-xl">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="text-sm font-bold text-brand-navy" id="modalSatpamTitle">Tambah Personel Satpam</h3>
+        <button onclick="closeModal('modalSatpamForm')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="handleSatpamSave(event)" class="space-y-3 text-xs">
+        <input type="hidden" id="satpamFormId">
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Nama Lengkap</label>
+          <input type="text" id="satpamFormNama" required class="w-full border p-2 rounded-lg">
+        </div>
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">NIP / NIK / No. KTA</label>
+          <input type="text" id="satpamFormNip" required class="w-full border p-2 rounded-lg">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="font-bold text-slate-700 block mb-1">Nomor WhatsApp/HP</label>
+            <input type="tel" id="satpamFormHp" required class="w-full border p-2 rounded-lg">
+          </div>
+          <div>
+            <label class="font-bold text-slate-700 block mb-1">Shift Rutin</label>
+            <select id="satpamFormShift" required class="w-full border p-2 rounded-lg">
+              <option value="Pagi">Shift Pagi</option>
+              <option value="Siang">Shift Siang</option>
+              <option value="Malam">Shift Malam</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Alamat Domisili</label>
+          <input type="text" id="satpamFormAlamat" required class="w-full border p-2 rounded-lg">
+        </div>
+        <button type="submit" class="w-full bg-brand-navy text-white py-2.5 rounded-lg font-bold">Simpan Data Personel</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL KOREKSI ABSENSI DENGAN AUDIT LOG ==================== -->
+  <div id="modalKoreksi" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-5 space-y-3 shadow-xl">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="text-sm font-bold text-brand-navy">Koreksi Absensi Satpam</h3>
+        <button onclick="closeModal('modalKoreksi')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="handleKoreksiSubmit(event)" class="space-y-3 text-xs">
+        <input type="hidden" id="koreksiId">
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Personel</label>
+          <input type="text" id="koreksiNama" disabled class="w-full bg-slate-100 border p-2 rounded-lg">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="font-bold text-slate-700 block mb-1">Jam Masuk</label>
+            <input type="time" id="koreksiJamMasuk" required class="w-full border p-2 rounded-lg">
+          </div>
+          <div>
+            <label class="font-bold text-slate-700 block mb-1">Jam Pulang</label>
+            <input type="time" id="koreksiJamPulang" class="w-full border p-2 rounded-lg">
+          </div>
+        </div>
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Status Kehadiran</label>
+          <select id="koreksiStatus" required class="w-full border p-2 rounded-lg">
+            <option value="HADIR">HADIR</option>
+            <option value="TERLAMBAT">TERLAMBAT</option>
+            <option value="IZIN">IZIN</option>
+            <option value="SAKIT">SAKIT</option>
+            <option value="TIDAK HADIR">TIDAK HADIR</option>
+          </select>
+        </div>
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Alasan Koreksi (Wajib untuk Audit Log)</label>
+          <input type="text" id="koreksiAlasan" required placeholder="Contoh: Kesalahan sistem GPS / mati lampu pos" class="w-full border p-2 rounded-lg">
+        </div>
+        <button type="submit" class="w-full bg-brand-navy text-white py-2.5 rounded-lg font-bold">Simpan Perubahan & Catat Log</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== JAVASCRIPT CORE ENGINE ==================== -->
+  <script>
+    /* ==========================================================================
+       1. INITIAL STATE & SEED DUMMY DATABASE (LOCALSTORAGE)
+       ========================================================================== */
+    const SCHOOL_COORDS = { lat: -7.347611, lng: 108.301668 };
+    const DEFAULT_RADIUS_METERS = 100;
+
+    const DEFAULT_DATA = {
+      config: {
+        schoolLat: -7.347611,
+        schoolLng: 108.301668,
+        radius: 100,
+        geoEnforce: true
+      },
+      users: [
+        { id: 'usr-1', username: 'admin', password: '123', role: 'admin', name: 'Admin Operasional' },
+        { id: 'usr-2', username: 'satpam1', password: '123', role: 'satpam', satpamId: 'sat-1', name: 'Asep Saepudin' },
+        { id: 'usr-3', username: 'satpam2', password: '123', role: 'satpam', satpamId: 'sat-2', name: 'Dadang Koswara' },
+        { id: 'usr-4', username: 'satpam3', password: '123', role: 'satpam', satpamId: 'sat-3', name: 'Ujang Permana' },
+        { id: 'usr-5', username: 'kepsek', password: '123', role: 'kepsek', name: 'H. Suryana, M.Pd (Kepala Sekolah)' }
+      ],
+      satpam: [
+        { id: 'sat-1', nama: 'Asep Saepudin', nip: '198504122010011002', hp: '081223344551', alamat: 'Manonjaya Kulon', shift: 'Pagi', status: 'Aktif' },
+        { id: 'sat-2', nama: 'Dadang Koswara', nip: '198709152011011003', hp: '081334455662', alamat: 'Margaluyu', shift: 'Siang', status: 'Aktif' },
+        { id: 'sat-3', nama: 'Ujang Permana', nip: '199011202012011004', hp: '081556677883', alamat: 'Cibeureum Tasikmalaya', shift: 'Malam', status: 'Aktif' }
+      ],
+      schedules: [
+        { id: 'sch-1', tanggal: new Date().toISOString().split('T')[0], satpamId: 'sat-1', shift: 'Pagi', jam: '06:30 - 14:30', note: 'Pos Gerbang Barat' },
+        { id: 'sch-2', tanggal: new Date().toISOString().split('T')[0], satpamId: 'sat-2', shift: 'Siang', jam: '14:00 - 22:00', note: 'Pos Utama & Patroli' },
+        { id: 'sch-3', tanggal: new Date().toISOString().split('T')[0], satpamId: 'sat-3', shift: 'Malam', jam: '22:00 - 06:30', note: 'Keliling Gedung Kelas' }
+      ],
+      attendance: [
+        {
+          id: 'att-101',
+          satpamId: 'sat-1',
+          nama: 'Asep Saepudin',
+          tanggal: new Date().toISOString().split('T')[0],
+          shift: 'Pagi',
+          jamMasuk: '06:25',
+          jamPulang: '14:35',
+          status: 'HADIR',
+          keterlambatan: 0,
+          lat: -7.347610,
+          lng: 108.301665,
+          fotoMasuk: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=faces',
+          fotoPulang: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=faces',
+          keterangan: 'Tepat waktu, situasi kondusif'
+        },
+        {
+          id: 'att-102',
+          satpamId: 'sat-2',
+          nama: 'Dadang Koswara',
+          tanggal: new Date().toISOString().split('T')[0],
+          shift: 'Siang',
+          jamMasuk: '14:15',
+          jamPulang: null,
+          status: 'TERLAMBAT',
+          keterlambatan: 15,
+          lat: -7.347615,
+          lng: 108.301670,
+          fotoMasuk: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=faces',
+          fotoPulang: null,
+          keterangan: 'Hujan deras di jalur Manonjaya'
+        }
+      ],
+      jurnals: [
+        {
+          id: 'jur-1',
+          tanggal: new Date().toISOString().split('T')[0],
+          jam: '07:15',
+          satpamNama: 'Asep Saepudin',
+          jenis: 'Pengaturan Lalu Lintas Pagi',
+          lokasi: 'Pintu Gerbang Utama Patrol Kulon',
+          uraian: 'Arus siswa masuk tertib, penyeberangan jalan dibantu 2 personel.',
+          tindakLanjut: 'Pintu gerbang ditutup pukul 07.15 untuk apel pagi.'
+        }
+      ],
+      incidents: [
+        {
+          id: 'inc-1',
+          tanggal: new Date().toISOString().split('T')[0],
+          jam: '09:45',
+          satpamNama: 'Asep Saepudin',
+          kategori: 'Pelanggaran Siswa (Lompat Pagar)',
+          lokasi: 'Sudut Lapangan Belakang Lab Biologi',
+          kronologi: '2 Siswa mencoba keluar tanpa surat jalan piket.',
+          tindakan: 'Siswa diarahkan langsung ke ruang BK dan Guru Piket.',
+          status: 'Selesai Ditangani'
+        }
+      ],
+      handovers: [
+        {
+          id: 'hnd-1',
+          tanggal: new Date().toISOString().split('T')[0],
+          jam: '14:30',
+          sebelumnya: 'Asep Saepudin',
+          penerima: 'Dadang Koswara',
+          kondisi: 'KONDUSIF & AMAN PENUH',
+          barang: 'Kunci Gerbang, 2 Unit HT, Buku Tamu',
+          catatan: 'Area parkir mobil guru terkunci rapi.',
+          konfirmasi: true
+        }
+      ],
+      izins: [],
+      auditLogs: [
+        {
+          timestamp: new Date().toLocaleString('id-ID'),
+          user: 'System Initialization',
+          aktivitas: 'Deploy Database SIMPAT',
+          detail: 'Database lokal diinisiasi secara otomatis.'
+        }
+      ]
+    };
+
+    function loadDB() {
+      const stored = localStorage.getItem('SIMPAT_DB');
+      if (!stored) {
+        localStorage.setItem('SIMPAT_DB', JSON.stringify(DEFAULT_DATA));
+        return JSON.parse(JSON.stringify(DEFAULT_DATA));
+      }
+      return JSON.parse(stored);
+    }
+
+    function saveDB(data) {
+      localStorage.setItem('SIMPAT_DB', JSON.stringify(data));
+    }
+
+    function logAudit(activity, detail) {
+      const db = loadDB();
+      const currentUser = JSON.parse(sessionStorage.getItem('SIMPAT_AUTH')) || { name: 'Anonim' };
+      db.auditLogs.unshift({
+        timestamp: new Date().toLocaleString('id-ID'),
+        user: currentUser.name,
+        aktivitas: activity,
+        detail: detail
+      });
+      saveDB(db);
+      renderAuditLogs();
+    }
+
+    /* ==========================================================================
+       2. AUTHENTICATION & SESSION MANAGEMENT
+       ========================================================================== */
+    function checkSession() {
+      const auth = sessionStorage.getItem('SIMPAT_AUTH');
+      if (auth) {
+        const user = JSON.parse(auth);
+        setupUserInterface(user);
+      } else {
+        document.getElementById('loginView').classList.remove('hidden');
+        document.getElementById('appPortal').classList.add('hidden');
+        document.getElementById('headerUserNav').classList.add('hidden');
+      }
+    }
+
+    function quickFill(u, p) {
+      document.getElementById('loginUsername').value = u;
+      document.getElementById('loginPassword').value = p;
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const u = document.getElementById('loginUsername').value.trim();
+      const p = document.getElementById('loginPassword').value.trim();
+      const db = loadDB();
+
+      const user = db.users.find(x => x.username === u && x.password === p);
+      if (user) {
+        sessionStorage.setItem('SIMPAT_AUTH', JSON.stringify(user));
+        logAudit('Login Pengguna', `User ${user.username} (${user.role}) berhasil masuk.`);
+        setupUserInterface(user);
+      } else {
+        alert('Username atau Kata Sandi salah!');
+      }
+    }
+
+    function logoutAction() {
+      logAudit('Logout Pengguna', 'Pengguna keluar dari sistem.');
+      sessionStorage.removeItem('SIMPAT_AUTH');
+      checkSession();
+    }
+
+    /* ==========================================================================
+       3. NAVIGATION & ROLE-BASED ACCESS CONTROL
+       ========================================================================== */
+    let currentRole = null;
+    let currentUserObj = null;
+
+    function setupUserInterface(user) {
+      currentUserObj = user;
+      currentRole = user.role;
+
+      document.getElementById('loginView').classList.add('hidden');
+      document.getElementById('appPortal').classList.remove('hidden');
+      document.getElementById('headerUserNav').classList.remove('hidden');
+      document.getElementById('headerUserNav').classList.add('flex');
+
+      document.getElementById('navUserName').innerText = user.name;
+      document.getElementById('navUserRole').innerText = user.role.toUpperCase();
+
+      buildDesktopNav(user.role);
+      buildMobileNav(user.role);
+
+      // Default Views
+      if (user.role === 'satpam') {
+        switchView('viewSatpamHome');
+        initSatpamHomeView();
+      } else {
+        switchView('viewDashboard');
+        initDashboardCharts();
+      }
+
+      refreshAllTables();
+    }
+
+    function buildDesktopNav(role) {
+      const nav = document.getElementById('desktopNavLinks');
+      nav.innerHTML = '';
+
+      let links = [];
+      if (role === 'admin') {
+        links = [
+          { id: 'viewDashboard', icon: 'fa-chart-pie', label: 'Dashboard' },
+          { id: 'viewDataSatpam', icon: 'fa-users-gear', label: 'Data Satpam' },
+          { id: 'viewJadwal', icon: 'fa-calendar-days', label: 'Jadwal Shift' },
+          { id: 'viewRekap', icon: 'fa-clipboard-list', label: 'Rekap Presensi' },
+          { id: 'viewJurnal', icon: 'fa-book', label: 'Jurnal Kegiatan' },
+          { id: 'viewIncident', icon: 'fa-triangle-exclamation', label: 'Insiden' },
+          { id: 'viewHandover', icon: 'fa-repeat', label: 'Serah Terima' },
+          { id: 'viewIzin', icon: 'fa-envelope-open-text', label: 'Izin/Cuti' },
+          { id: 'viewSettings', icon: 'fa-sliders', label: 'Pengaturan & Audit' }
+        ];
+      } else if (role === 'satpam') {
+        links = [
+          { id: 'viewSatpamHome', icon: 'fa-home', label: 'Beranda Absensi' },
+          { id: 'viewJadwal', icon: 'fa-calendar-days', label: 'Jadwal Saya' },
+          { id: 'viewJurnal', icon: 'fa-book-open', label: 'Jurnal Tugas' },
+          { id: 'viewIncident', icon: 'fa-triangle-exclamation', label: 'Lapor Insiden' },
+          { id: 'viewHandover', icon: 'fa-repeat', label: 'Serah Terima' },
+          { id: 'viewIzin', icon: 'fa-file-signature', label: 'Ajukan Izin' }
+        ];
+      } else if (role === 'kepsek') {
+        links = [
+          { id: 'viewDashboard', icon: 'fa-chart-line', label: 'Monitoring Pimpinan' },
+          { id: 'viewRekap', icon: 'fa-file-invoice', label: 'Rekap Presensi' },
+          { id: 'viewJurnal', icon: 'fa-book', label: 'Jurnal Lapangan' },
+          { id: 'viewIncident', icon: 'fa-triangle-exclamation', label: 'Laporan Kejadian' }
+        ];
+      }
+
+      links.forEach((l, idx) => {
+        const btn = document.createElement('button');
+        btn.className = `px-3 py-1.5 rounded hover:bg-brand-navy flex items-center gap-1.5 transition text-xs font-medium ${idx === 0 ? 'bg-brand-navy text-brand-gold font-bold' : ''}`;
+        btn.innerHTML = `<i class="fa-solid ${l.icon}"></i> <span>${l.label}</span>`;
+        btn.onclick = () => {
+          document.querySelectorAll('#desktopNavLinks button').forEach(b => {
+            b.classList.remove('bg-brand-navy', 'text-brand-gold', 'font-bold');
+          });
+          btn.classList.add('bg-brand-navy', 'text-brand-gold', 'font-bold');
+          switchView(l.id);
+        };
+        nav.appendChild(btn);
+      });
+    }
+
+    function buildMobileNav(role) {
+      const mob = document.getElementById('mobileBottomNav');
+      mob.innerHTML = '';
+      let items = [];
+
+      if (role === 'satpam') {
+        items = [
+          { id: 'viewSatpamHome', icon: 'fa-house', label: 'Beranda' },
+          { id: 'viewJadwal', icon: 'fa-calendar', label: 'Jadwal' },
+          { id: 'viewJurnal', icon: 'fa-book', label: 'Jurnal' },
+          { id: 'viewIncident', icon: 'fa-bullhorn', label: 'Insiden' },
+          { id: 'viewIzin', icon: 'fa-envelope', label: 'Izin' }
+        ];
+      } else {
+        items = [
+          { id: 'viewDashboard', icon: 'fa-chart-pie', label: 'Ringkasan' },
+          { id: 'viewRekap', icon: 'fa-clipboard-check', label: 'Presensi' },
+          { id: 'viewJurnal', icon: 'fa-book', label: 'Jurnal' },
+          { id: 'viewIncident', icon: 'fa-triangle-exclamation', label: 'Insiden' },
+          { id: 'viewSettings', icon: 'fa-gear', label: 'Sistem' }
+        ];
+      }
+
+      items.forEach((it, idx) => {
+        const btn = document.createElement('button');
+        btn.className = `flex flex-col items-center py-1.5 ${idx === 0 ? 'bottom-nav-active' : 'text-slate-500'}`;
+        btn.innerHTML = `<i class="fa-solid ${it.icon} text-base mb-0.5"></i> <span>${it.label}</span>`;
+        btn.onclick = () => {
+          document.querySelectorAll('#mobileBottomNav button').forEach(b => {
+            b.classList.remove('bottom-nav-active');
+            b.classList.add('text-slate-500');
+          });
+          btn.classList.add('bottom-nav-active');
+          btn.classList.remove('text-slate-500');
+          switchView(it.id);
+        };
+        mob.appendChild(btn);
+      });
+    }
+
+    function switchView(viewId) {
+      const views = [
+        'viewDashboard', 'viewSatpamHome', 'viewDataSatpam', 'viewJadwal',
+        'viewJurnal', 'viewIncident', 'viewHandover', 'viewIzin', 'viewRekap', 'viewSettings'
+      ];
+      views.forEach(v => {
+        const el = document.getElementById(v);
+        if (el) el.classList.add('hidden');
+      });
+
+      const target = document.getElementById(viewId);
+      if (target) {
+        target.classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      if (viewId === 'viewDashboard') initDashboardCharts();
+      if (viewId === 'viewSatpamHome') initSatpamHomeView();
+    }
+
+    /* ==========================================================================
+       4. DIGITAL CLOCK & SATPAM HOMEPAGE LOGIC
+       ========================================================================== */
+    setInterval(() => {
+      const now = new Date();
+      const clockEl = document.getElementById('liveDigitalClock');
+      const dateEl = document.getElementById('liveDigitalDate');
+      const dashDate = document.getElementById('dashTodayDate');
+      
+      const timeStr = now.toLocaleTimeString('id-ID', { hour12: false });
+      const dateStr = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+      if (clockEl) clockEl.innerText = timeStr;
+      if (dateEl) dateEl.innerText = dateStr;
+      if (dashDate) dashDate.innerText = `Data Tanggal: ${dateStr}`;
+    }, 1000);
+
+    function initSatpamHomeView() {
+      const db = loadDB();
+      const user = currentUserObj;
+      const mySatpam = db.satpam.find(s => s.id === user.satpamId) || { nama: user.name, shift: 'Pagi' };
+
+      document.getElementById('satpamHeroName').innerText = mySatpam.nama;
+      document.getElementById('satpamHeroShift').innerText = `Shift ${mySatpam.shift}`;
+
+      const todayStr = new Date().toISOString().split('T')[0];
+      const myAtt = db.attendance.find(a => a.satpamId === user.satpamId && a.tanggal === todayStr);
+
+      const statusBox = document.getElementById('satpamTodayStatusBox');
+      if (!myAtt) {
+        statusBox.innerHTML = `
+          <div class="bg-amber-50 text-amber-800 p-3 rounded-xl border border-amber-200 flex items-center gap-2">
+            <i class="fa-solid fa-triangle-exclamation text-base"></i>
+            <div>
+              <p class="font-bold">Belum Ada Presensi Masuk</p>
+              <p class="text-[11px]">Silakan tekan tombol hijau untuk melakukan absensi masuk tugas.</p>
+            </div>
+          </div>
+        `;
+      } else {
+        statusBox.innerHTML = `
+          <div class="grid grid-cols-2 gap-2">
+            <div class="p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg">
+              <span class="text-[10px] text-emerald-700 font-bold block">ABSEN MASUK</span>
+              <p class="text-sm font-black text-emerald-900">${myAtt.jamMasuk || '-'} WIB</p>
+              <span class="text-[10px] text-emerald-600 font-semibold">${myAtt.status}</span>
+            </div>
+            <div class="p-2.5 ${myAtt.jamPulang ? 'bg-blue-50 border-blue-200' : 'bg-slate-50 border-slate-200'} border rounded-lg">
+              <span class="text-[10px] text-slate-500 font-bold block">ABSEN PULANG</span>
+              <p class="text-sm font-black text-slate-800">${myAtt.jamPulang ? myAtt.jamPulang + ' WIB' : 'Belum Absen'}</p>
+              <span class="text-[10px] text-slate-500">${myAtt.jamPulang ? 'Shift Selesai' : 'Sedang Bertugas'}</span>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    /* ==========================================================================
+       5. GEOLOCATION ENGINE (HAVERSINE DISTANCE)
+       ========================================================================== */
+    function calcDistanceMeters(lat1, lon1, lat2, lon2) {
+      const R = 6371e3; // metres
+      const φ1 = lat1 * Math.PI / 180;
+      const φ2 = lat2 * Math.PI / 180;
+      const Δφ = (lat2 - lat1) * Math.PI / 180;
+      const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+      const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ/2) * Math.sin(Δλ/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return Math.round(R * c);
+    }
+
+    let detectedLocation = null;
+    let isLocationValid = false;
+
+    function verifyGPSLocation() {
+      const db = loadDB();
+      const cfg = db.config;
+      const badge = document.getElementById('geoStatusBadge');
+      const distText = document.getElementById('geoDistanceText');
+
+      if (!navigator.geolocation) {
+        badge.innerText = 'GPS Tidak Didukung';
+        distText.innerText = 'Browser tidak mendukung GPS.';
+        return;
+      }
+
+      badge.innerText = 'Mencari Satelit...';
+      distText.innerText = 'Mengambil data koordinat perangkat...';
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const uLat = pos.coords.latitude;
+          const uLng = pos.coords.longitude;
+          detectedLocation = { lat: uLat, lng: uLng };
+
+          const dist = calcDistanceMeters(uLat, uLng, cfg.schoolLat, cfg.schoolLng);
+
+          if (!cfg.geoEnforce || dist <= cfg.radius) {
+            isLocationValid = true;
+            badge.className = 'text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold';
+            badge.innerText = 'Dalam Radius Area';
+            distText.innerText = `Jarak ke Pos Satpam: ${dist} meter (Valid <= ${cfg.radius}m)`;
+          } else {
+            isLocationValid = false;
+            badge.className = 'text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold';
+            badge.innerText = 'Di Luar Radius';
+            distText.innerText = `Jarak: ${dist}m. Titik lokasi Anda berada di luar area absensi sekolah (Maks ${cfg.radius}m).`;
+          }
+          checkReadyToSubmit();
+        },
+        (err) => {
+          console.warn('Geolocation error:', err.message);
+          // Fallback demo simulator jika permission browser di-block
+          const simDist = 35; // simulasi tepat di pos satpam
+          detectedLocation = { lat: cfg.schoolLat, lng: cfg.schoolLng };
+          isLocationValid = true;
+          badge.className = 'text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold';
+          badge.innerText = 'Simulasi Valid (Demo)';
+          distText.innerText = `Jarak simulasi: ${simDist} meter dari Pos Satpam SMAN 1 Manonjaya.`;
+          checkReadyToSubmit();
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    }
+
+    /* ==========================================================================
+       6. WEBCAM & SELFIE CAPTURE
+       ========================================================================== */
+    let currentAttType = 'MASUK';
+    let mediaStream = null;
+    let capturedPhotoBase64 = null;
+
+    function openAttendanceModal(type) {
+      currentAttType = type;
+      document.getElementById('modalAttendanceTitle').innerText = `ABSENSI ${type} - POS SATPAM`;
+      document.getElementById('modalAttendance').classList.remove('hidden');
+      
+      // Reset State
+      capturedPhotoBase64 = null;
+      document.getElementById('photoCapturedImg').classList.add('hidden');
+      document.getElementById('webcamVideo').classList.add('hidden');
+      document.getElementById('camPlaceholder').classList.remove('hidden');
+      document.getElementById('btnStartCam').classList.remove('hidden');
+      document.getElementById('btnSnapPhoto').classList.add('hidden');
+      document.getElementById('btnSubmitAttendance').disabled = true;
+
+      verifyGPSLocation();
+    }
+
+    function closeAttendanceModal() {
+      stopCamera();
+      document.getElementById('modalAttendance').classList.add('hidden');
+    }
+
+    async function startCamera() {
+      const spinner = document.getElementById('camLoadingSpinner');
+      spinner.classList.remove('hidden');
+
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 480 } }
+        });
+        const video = document.getElementById('webcamVideo');
+        video.srcObject = mediaStream;
+        video.classList.remove('hidden');
+        document.getElementById('camPlaceholder').classList.add('hidden');
+        document.getElementById('btnStartCam').classList.add('hidden');
+        document.getElementById('btnSnapPhoto').classList.remove('hidden');
+      } catch (err) {
+        console.warn('Camera Error:', err);
+        // Fallback placeholder photo dummy
+        capturedPhotoBase64 = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&crop=faces";
+        const img = document.getElementById('photoCapturedImg');
+        img.src = capturedPhotoBase64;
+        img.classList.remove('hidden');
+        document.getElementById('camPlaceholder').classList.add('hidden');
+        document.getElementById('btnStartCam').classList.add('hidden');
+        alert('Sensor kamera perangkat tidak dapat dibuka otomatis. Menggunakan mode foto simulasi keamanan.');
+        checkReadyToSubmit();
+      } finally {
+        spinner.classList.add('hidden');
+      }
+    }
+
+    function capturePhoto() {
+      const video = document.getElementById('webcamVideo');
+      const canvas = document.getElementById('photoCanvas');
+      canvas.width = video.videoWidth || 320;
+      canvas.height = video.videoHeight || 320;
+      const ctx = canvas.getContext('2d');
+      // Flip horizontal untuk selfie mirroring
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      capturedPhotoBase64 = canvas.toDataURL('image/jpeg', 0.8);
+      stopCamera();
+
+      video.classList.add('hidden');
+      const img = document.getElementById('photoCapturedImg');
+      img.src = capturedPhotoBase64;
+      img.classList.remove('hidden');
+      document.getElementById('btnSnapPhoto').classList.add('hidden');
+
+      checkReadyToSubmit();
+    }
+
+    function stopCamera() {
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(t => t.stop());
+        mediaStream = null;
+      }
+    }
+
+    function checkReadyToSubmit() {
+      const btn = document.getElementById('btnSubmitAttendance');
+      const ready = capturedPhotoBase64 && isLocationValid;
+      btn.disabled = !ready;
+      if (ready) {
+        btn.className = 'w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-extrabold text-sm transition shadow-lg flex items-center justify-center gap-2 cursor-pointer';
+      } else {
+        btn.className = 'w-full bg-slate-300 text-slate-500 py-3 rounded-xl font-extrabold text-sm transition flex items-center justify-center gap-2';
+      }
+    }
+
+    /* ==========================================================================
+       7. PROCESS ATTENDANCE (BUSINESS LOGIC & PUNCTUALITY RULES)
+       ========================================================================== */
+    function processAttendanceSubmission() {
+      const db = loadDB();
+      const user = currentUserObj;
+      const note = document.getElementById('attNoteInput').value;
+      const now = new Date();
+      const todayStr = now.toISOString().split('T')[0];
+      const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+      // Cari profil satpam
+      const satpam = db.satpam.find(s => s.id === user.satpamId) || { id: user.id, nama: user.name, shift: 'Pagi' };
+
+      let attRecord = db.attendance.find(a => a.satpamId === satpam.id && a.tanggal === todayStr);
+
+      if (currentAttType === 'MASUK') {
+        // Tentukan keterlambatan: Shift Pagi masuk 06.30 (toleransi 07.00)
+        let status = 'HADIR';
+        let lateMins = 0;
+        const [hh, mm] = timeStr.split(':').map(Number);
+        const currentMins = hh * 60 + mm;
+        const shiftStartMins = 6 * 60 + 30; // 06:30
+        const toleranceMins = 7 * 60 + 0;   // 07:00
+
+        if (currentMins > toleranceMins) {
+          status = 'TERLAMBAT';
+          lateMins = currentMins - toleranceMins;
+        }
+
+        if (attRecord) {
+          attRecord.jamMasuk = timeStr;
+          attRecord.status = status;
+          attRecord.keterlambatan = lateMins;
+          attRecord.fotoMasuk = capturedPhotoBase64;
+          attRecord.keterangan = note || 'Absensi Masuk Diperbarui';
+        } else {
+          db.attendance.push({
+            id: 'att-' + Date.now(),
+            satpamId: satpam.id,
+            nama: satpam.nama,
+            tanggal: todayStr,
+            shift: satpam.shift,
+            jamMasuk: timeStr,
+            jamPulang: null,
+            status: status,
+            keterlambatan: lateMins,
+            lat: detectedLocation ? detectedLocation.lat : SCHOOL_COORDS.lat,
+            lng: detectedLocation ? detectedLocation.lng : SCHOOL_COORDS.lng,
+            fotoMasuk: capturedPhotoBase64,
+            fotoPulang: null,
+            keterangan: note || 'Masuk shift tepat waktu'
+          });
+        }
+        logAudit('Absensi Masuk Satpam', `${satpam.nama} absen masuk pada ${timeStr} WIB (Status: ${status}).`);
+      } else {
+        // Absen Pulang
+        if (!attRecord) {
+          db.attendance.push({
+            id: 'att-' + Date.now(),
+            satpamId: satpam.id,
+            nama: satpam.nama,
+            tanggal: todayStr,
+            shift: satpam.shift,
+            jamMasuk: '-',
+            jamPulang: timeStr,
+            status: 'ABSEN BELUM LENGKAP',
+            keterlambatan: 0,
+            lat: detectedLocation ? detectedLocation.lat : SCHOOL_COORDS.lat,
+            lng: detectedLocation ? detectedLocation.lng : SCHOOL_COORDS.lng,
+            fotoMasuk: null,
+            fotoPulang: capturedPhotoBase64,
+            keterangan: note || 'Langsung absen pulang'
+          });
+        } else {
+          attRecord.jamPulang = timeStr;
+          attRecord.fotoPulang = capturedPhotoBase64;
+          if (note) attRecord.keterangan += ` | Catatan pulang: ${note}`;
+        }
+        logAudit('Absensi Pulang Satpam', `${satpam.nama} absen pulang pada ${timeStr} WIB.`);
+      }
+
+      saveDB(db);
+      closeAttendanceModal();
+      alert(`Absensi ${currentAttType} berhasil dicatat!\nNama: ${satpam.nama}\nJam: ${timeStr} WIB`);
+      initSatpamHomeView();
+      refreshAllTables();
+    }
+
+    /* ==========================================================================
+       8. JURNAL KEGIATAN & OPERASIONAL
+       ========================================================================== */
+    function openModalJurnalForm() {
+      document.getElementById('modalJurnal').classList.remove('hidden');
+    }
+
+    function handleJurnalSubmit(e) {
+      e.preventDefault();
+      const db = loadDB();
+      const user = currentUserObj;
+      const jenis = document.getElementById('jurnalJenis').value;
+      const lokasi = document.getElementById('jurnalLokasi').value;
+      const uraian = document.getElementById('jurnalUraian').value;
+      const tindakLanjut = document.getElementById('jurnalTindakLanjut').value;
+      const now = new Date();
+
+      db.jurnals.unshift({
+        id: 'jur-' + Date.now(),
+        tanggal: now.toISOString().split('T')[0],
+        jam: now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+        satpamNama: user.name,
+        jenis: jenis,
+        lokasi: lokasi,
+        uraian: uraian,
+        tindakLanjut: tindakLanjut
+      });
+
+      logAudit('Pencatatan Jurnal Satpam', `${user.name} mencatat kegiatan: ${jenis} di ${lokasi}`);
+      saveDB(db);
+      closeModal('modalJurnal');
+      e.target.reset();
+      renderJurnalCards();
+    }
+
+    function renderJurnalCards() {
+      const db = loadDB();
+      const container = document.getElementById('jurnalCardContainer');
+      container.innerHTML = '';
+
+      if (db.jurnals.length === 0) {
+        container.innerHTML = '<p class="text-xs text-slate-400 col-span-3 text-center py-6">Belum ada jurnal kegiatan hari ini.</p>';
+        return;
+      }
+
+      db.jurnals.forEach(j => {
+        const card = document.createElement('div');
+        card.className = 'bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2';
+        card.innerHTML = `
+          <div class="flex justify-between items-center text-[11px] text-slate-500 border-b pb-2">
+            <span class="font-bold text-brand-navy"><i class="fa-solid fa-clock mr-1"></i>${j.jam} WIB</span>
+            <span>${j.tanggal}</span>
+          </div>
+          <h4 class="font-bold text-xs text-slate-800">${j.jenis}</h4>
+          <p class="text-[11px] text-slate-500"><i class="fa-solid fa-location-dot text-rose-500 mr-1"></i>${j.lokasi}</p>
+          <p class="text-xs text-slate-700 bg-slate-50 p-2 rounded">${j.uraian}</p>
+          ${j.tindakLanjut ? `<p class="text-[11px] text-emerald-700 font-semibold">Tindak Lanjut: ${j.tindakLanjut}</p>` : ''}
+          <div class="pt-2 text-[10px] text-slate-400 text-right">Petugas: ${j.satpamNama}</div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    /* ==========================================================================
+       9. LAPORAN KEJADIAN / INCIDENT REPORT
+       ========================================================================== */
+    function openModalIncidentForm() {
+      document.getElementById('modalIncident').classList.remove('hidden');
+    }
+
+    function handleIncidentSubmit(e) {
+      e.preventDefault();
+      const db = loadDB();
+      const user = currentUserObj;
+      const kategori = document.getElementById('incKategori').value;
+      const lokasi = document.getElementById('incLokasi').value;
+      const kronologi = document.getElementById('incKronologi').value;
+      const tindakan = document.getElementById('incTindakan').value;
+      const now = new Date();
+
+      db.incidents.unshift({
+        id: 'inc-' + Date.now(),
+        tanggal: now.toISOString().split('T')[0],
+        jam: now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+        satpamNama: user.name,
+        kategori: kategori,
+        lokasi: lokasi,
+        kronologi: kronologi,
+        tindakan: tindakan,
+        status: 'Dalam Pengawasan'
+      });
+
+      logAudit('Laporan Insiden Keamanan', `${user.name} melaporkan kejadian: ${kategori}`);
+      saveDB(db);
+      closeModal('modalIncident');
+      e.target.reset();
+      renderIncidentTable();
+    }
+
+    function renderIncidentTable() {
+      const db = loadDB();
+      const tbody = document.getElementById('incidentTableBody');
+      tbody.innerHTML = '';
+
+      if (db.incidents.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400">Tidak ada laporan insiden keamanan.</td></tr>';
+        return;
+      }
+
+      db.incidents.forEach(inc => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50';
+        tr.innerHTML = `
+          <td class="p-3">${inc.tanggal}<br><span class="text-slate-400 font-mono">${inc.jam}</span></td>
+          <td class="p-3 font-bold text-rose-700">${inc.kategori}</td>
+          <td class="p-3">${inc.lokasi}</td>
+          <td class="p-3">
+            <p class="font-medium text-slate-800">${inc.kronologi}</p>
+            <p class="text-[11px] text-slate-500 italic mt-0.5">Tindakan: ${inc.tindakan}</p>
+          </td>
+          <td class="p-3 font-semibold">${inc.satpamNama}</td>
+          <td class="p-3"><span class="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded font-bold">${inc.status}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    /* ==========================================================================
+       10. SERAH TERIMA SHIFT (HANDOVER)
+       ========================================================================== */
+    function openModalHandoverForm() {
+      const db = loadDB();
+      const select = document.getElementById('handoverPenerima');
+      select.innerHTML = '';
+      db.satpam.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.nama;
+        opt.innerText = `${s.nama} (Shift ${s.shift})`;
+        select.appendChild(opt);
+      });
+      document.getElementById('modalHandover').classList.remove('hidden');
+    }
+
+    function handleHandoverSubmit(e) {
+      e.preventDefault();
+      const db = loadDB();
+      const user = currentUserObj;
+      const penerima = document.getElementById('handoverPenerima').value;
+      const kondisi = document.getElementById('handoverKondisi').value;
+      const barang = document.getElementById('handoverBarang').value;
+      const catatan = document.getElementById('handoverCatatan').value;
+      const now = new Date();
+
+      db.handovers.unshift({
+        id: 'hnd-' + Date.now(),
+        tanggal: now.toISOString().split('T')[0],
+        jam: now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+        sebelumnya: user.name,
+        penerima: penerima,
+        kondisi: kondisi,
+        barang: barang,
+        catatan: catatan,
+        konfirmasi: true
+      });
+
+      logAudit('Serah Terima Tugas Satpam', `${user.name} menyerahkan tugas kepada ${penerima}`);
+      saveDB(db);
+      closeModal('modalHandover');
+      e.target.reset();
+      renderHandoverList();
+    }
+
+    function renderHandoverList() {
+      const db = loadDB();
+      const container = document.getElementById('handoverListContainer');
+      container.innerHTML = '';
+
+      if (db.handovers.length === 0) {
+        container.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">Belum ada serah terima tugas.</p>';
+        return;
+      }
+
+      db.handovers.forEach(h => {
+        const item = document.createElement('div');
+        item.className = 'bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2 text-xs';
+        item.innerHTML = `
+          <div class="flex justify-between items-center border-b pb-2">
+            <span class="font-bold text-brand-navy">${h.tanggal} pukul ${h.jam} WIB</span>
+            <span class="text-[10px] bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded">${h.kondisi}</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-600">
+            <div><span class="font-bold">Petugas Sebelumnya:</span> ${h.sebelumnya}</div>
+            <div><span class="font-bold">Petugas Penerima:</span> ${h.penerima}</div>
+          </div>
+          <div class="bg-slate-50 p-2 rounded">
+            <span class="font-bold text-slate-700 block text-[11px]">Inventaris / Sarana:</span>
+            <p class="text-[11px] text-slate-600">${h.barang}</p>
+          </div>
+          <p class="text-slate-700"><strong>Catatan Khusus:</strong> ${h.catatan}</p>
+          <div class="flex items-center gap-1.5 text-emerald-700 text-[11px] font-bold">
+            <i class="fa-solid fa-circle-check"></i> Diverifikasi secara digital oleh kedua petugas
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    /* ==========================================================================
+       11. PENGAJUAN IZIN / SAKIT / CUTI
+       ========================================================================== */
+    function openModalIzinForm() {
+      document.getElementById('modalIzin').classList.remove('hidden');
+    }
+
+    function handleIzinSubmit(e) {
+      e.preventDefault();
+      const db = loadDB();
+      const user = currentUserObj;
+      const jenis = document.getElementById('izinJenis').value;
+      const mulai = document.getElementById('izinMulai').value;
+      const selesai = document.getElementById('izinSelesai').value;
+      const alasan = document.getElementById('izinAlasan').value;
+
+      db.izins.unshift({
+        id: 'izn-' + Date.now(),
+        satpamNama: user.name,
+        satpamId: user.satpamId,
+        jenis: jenis,
+        mulai: mulai,
+        selesai: selesai,
+        alasan: alasan,
+        status: 'Menunggu Persetujuan'
+      });
+
+      logAudit('Pengajuan Izin Satpam', `${user.name} mengajukan ${jenis} (${mulai} s.d ${selesai})`);
+      saveDB(db);
+      closeModal('modalIzin');
+      e.target.reset();
+      renderIzinTable();
+    }
+
+    function renderIzinTable() {
+      const db = loadDB();
+      const tbody = document.getElementById('izinTableBody');
+      const isAdmin = currentRole === 'admin';
+      document.getElementById('colAksiIzin').style.display = isAdmin ? 'table-cell' : 'none';
+      tbody.innerHTML = '';
+
+      if (db.izins.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${isAdmin ? 6 : 5}" class="p-4 text-center text-slate-400">Tidak ada pengajuan izin/cuti.</td></tr>`;
+        return;
+      }
+
+      db.izins.forEach(iz => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50';
+        tr.innerHTML = `
+          <td class="p-3 font-semibold">${iz.satpamNama}</td>
+          <td class="p-3 font-bold text-amber-700">${iz.jenis}</td>
+          <td class="p-3">${iz.mulai} s/d ${iz.selesai}</td>
+          <td class="p-3">${iz.alasan}</td>
+          <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${iz.status === 'Disetujui' ? 'bg-emerald-100 text-emerald-700' : (iz.status === 'Ditolak' ? 'bg-red-100 text-red-700' : 'bg-slate-200 text-slate-700')}">${iz.status}</span></td>
+          ${isAdmin ? `
+            <td class="p-3 text-center">
+              <div class="flex justify-center gap-1">
+                <button onclick="approveIzin('${iz.id}', true)" class="bg-emerald-600 text-white px-2 py-1 rounded text-[10px] font-bold hover:bg-emerald-700">Setujui</button>
+                <button onclick="approveIzin('${iz.id}', false)" class="bg-red-600 text-white px-2 py-1 rounded text-[10px] font-bold hover:bg-red-700">Tolak</button>
+              </div>
+            </td>
+          ` : ''}
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function approveIzin(id, isApproved) {
+      const db = loadDB();
+      const item = db.izins.find(x => x.id === id);
+      if (item) {
+        item.status = isApproved ? 'Disetujui' : 'Ditolak';
+        logAudit('Persetujuan Izin Satpam', `Admin ${isApproved ? 'menyetujui' : 'menolak'} pengajuan ${item.satpamNama}`);
+        saveDB(db);
+        renderIzinTable();
+      }
+    }
+
+    /* ==========================================================================
+       12. REKAP ABSENSI & AUDIT KOREKSI
+       ========================================================================== */
+    function renderRekapTable() {
+      const db = loadDB();
+      const tbody = document.getElementById('rekapTableBody');
+      const isAdmin = currentRole === 'admin';
+      document.getElementById('colAksiRekap').style.display = isAdmin ? 'table-cell' : 'none';
+
+      const filterTgl = document.getElementById('filterRekapTanggal').value;
+      const filterSts = document.getElementById('filterRekapStatus').value;
+
+      let records = db.attendance;
+      if (filterTgl) records = records.filter(r => r.tanggal === filterTgl);
+      if (filterSts) records = records.filter(r => r.status === filterSts);
+
+      tbody.innerHTML = '';
+      if (records.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${isAdmin ? 9 : 8}" class="p-4 text-center text-slate-400">Belum ada riwayat absensi yang cocok.</td></tr>`;
+        return;
+      }
+
+      records.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50';
+        tr.innerHTML = `
+          <td class="p-2.5 font-medium">${r.tanggal}</td>
+          <td class="p-2.5 font-bold text-slate-800">${r.nama}</td>
+          <td class="p-2.5">${r.shift}</td>
+          <td class="p-2.5 text-emerald-700 font-bold">${r.jamMasuk || '-'}</td>
+          <td class="p-2.5 text-slate-700 font-bold">${r.jamPulang || '-'}</td>
+          <td class="p-2.5">
+            <span class="px-2 py-0.5 rounded text-[10px] font-black ${r.status === 'HADIR' ? 'bg-emerald-100 text-emerald-800' : (r.status === 'TERLAMBAT' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800')}">${r.status}</span>
+          </td>
+          <td class="p-2.5">${r.keterlambatan ? r.keterlambatan + ' Menit' : '-'}</td>
+          <td class="p-2.5">
+            ${r.fotoMasuk ? `<img src="${r.fotoMasuk}" class="w-7 h-7 rounded-full object-cover border" title="Bukti Selfie">` : '<span class="text-slate-300">-</span>'}
+          </td>
+          ${isAdmin ? `
+            <td class="p-2.5 text-center">
+              <button onclick="openModalKoreksi('${r.id}')" class="bg-slate-800 hover:bg-slate-900 text-white px-2 py-1 rounded text-[10px] font-bold">Koreksi</button>
+            </td>
+          ` : ''}
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function openModalKoreksi(id) {
+      const db = loadDB();
+      const r = db.attendance.find(x => x.id === id);
+      if (!r) return;
+
+      document.getElementById('koreksiId').value = r.id;
+      document.getElementById('koreksiNama').value = r.nama;
+      document.getElementById('koreksiJamMasuk').value = r.jamMasuk !== '-' ? r.jamMasuk : '';
+      document.getElementById('koreksiJamPulang').value = r.jamPulang ? r.jamPulang : '';
+      document.getElementById('koreksiStatus').value = r.status;
+      document.getElementById('koreksiAlasan').value = '';
+
+      document.getElementById('modalKoreksi').classList.remove('hidden');
+    }
+
+    function handleKoreksiSubmit(e) {
+      e.preventDefault();
+      const db = loadDB();
+      const id = document.getElementById('koreksiId').value;
+      const alasan = document.getElementById('koreksiAlasan').value;
+      const jamM = document.getElementById('koreksiJamMasuk').value;
+      const jamP = document.getElementById('koreksiJamPulang').value;
+      const status = document.getElementById('koreksiStatus').value;
+
+      const record = db.attendance.find(x => x.id === id);
+      if (record) {
+        const oldState = `[Masuk: ${record.jamMasuk}, Status: ${record.status}]`;
+        record.jamMasuk = jamM;
+        record.jamPulang = jamP;
+        record.status = status;
+        record.keterangan += ` | Dikoreksi Admin: ${alasan}`;
+
+        const newState = `[Masuk: ${jamM}, Status: ${status}]`;
+        logAudit('Koreksi Absensi Manual', `Data ${record.nama} diubah dari ${oldState} ke ${newState}. Alasan: ${alasan}`);
+        saveDB(db);
+        closeModal('modalKoreksi');
+        renderRekapTable();
+        refreshAllTables();
+      }
+    }
+
+    /* ==========================================================================
+       13. MANAJEMEN SATPAM & JADWAL SHIFT
+       ========================================================================== */
+    function renderSatpamTable() {
+      const db = loadDB();
+      const tbody = document.getElementById('satpamTableBody');
+      const search = document.getElementById('searchSatpamInput').value.toLowerCase();
+      const shiftFilter = document.getElementById('filterShiftSatpam').value;
+
+      let list = db.satpam;
+      if (search) list = list.filter(s => s.nama.toLowerCase().includes(search) || s.nip.includes(search));
+      if (shiftFilter) list = list.filter(s => s.shift === shiftFilter);
+
+      tbody.innerHTML = '';
+      list.forEach(s => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50';
+        tr.innerHTML = `
+          <td class="p-2.5 font-mono text-slate-500">${s.nip}</td>
+          <td class="p-2.5 font-bold text-slate-800">${s.nama}</td>
+          <td class="p-2.5">${s.hp}</td>
+          <td class="p-2.5">${s.alamat}</td>
+          <td class="p-2.5"><span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-[10px] font-bold">Shift ${s.shift}</span></td>
+          <td class="p-2.5"><span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold">${s.status}</span></td>
+          <td class="p-2.5 text-center">
+            <button onclick="deleteSatpam('${s.id}')" class="text-red-600 hover:text-red-800 p-1"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function openModalSatpamForm() {
+      document.getElementById('modalSatpamForm').classList.remove('hidden');
+    }
+
+    function handleSatpamSave(e) {
+      e.preventDefault();
+      const db = loadDB();
+      const nama = document.getElementById('satpamFormNama').value;
+      const nip = document.getElementById('satpamFormNip').value;
+      const hp = document.getElementById('satpamFormHp').value;
+      const shift = document.getElementById('satpamFormShift').value;
+      const alamat = document.getElementById('satpamFormAlamat').value;
+
+      const newId = 'sat-' + Date.now();
+      db.satpam.push({ id: newId, nama, nip, hp, shift, alamat, status: 'Aktif' });
+      // Buat akun otomatis
+      db.users.push({
+        id: 'usr-' + Date.now(),
+        username: nip.slice(-6) || 'satpam' + db.satpam.length,
+        password: '123',
+        role: 'satpam',
+        satpamId: newId,
+        name: nama
+      });
+
+      logAudit('Tambah Personel Satpam', `Menambahkan satpam baru: ${nama} (${nip})`);
+      saveDB(db);
+      closeModal('modalSatpamForm');
+      e.target.reset();
+      renderSatpamTable();
+    }
+
+    function deleteSatpam(id) {
+      if (!confirm('Apakah yakin ingin menonaktifkan data satpam ini?')) return;
+      const db = loadDB();
+      const item = db.satpam.find(s => s.id === id);
+      if (item) {
+        db.satpam = db.satpam.filter(s => s.id !== id);
+        logAudit('Hapus Satpam', `Menghapus data satpam: ${item.nama}`);
+        saveDB(db);
+        renderSatpamTable();
+      }
+    }
+
+    function renderJadwalTable() {
+      const db = loadDB();
+      const tbody = document.getElementById('jadwalTableBody');
+      const isAdmin = currentRole === 'admin';
+      document.getElementById('colAksiJadwal').style.display = isAdmin ? 'table-cell' : 'none';
+      if (document.getElementById('btnTambahJadwal')) {
+        document.getElementById('btnTambahJadwal').style.display = isAdmin ? 'flex' : 'none';
+      }
+
+      tbody.innerHTML = '';
+      db.schedules.forEach(sch => {
+        const sat = db.satpam.find(s => s.id === sch.satpamId) || { nama: 'Petugas' };
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50';
+        tr.innerHTML = `
+          <td class="p-3 font-medium">${sch.tanggal}</td>
+          <td class="p-3 font-bold text-slate-800">${sat.nama}</td>
+          <td class="p-3"><span class="bg-blue-100 text-blue-800 text-[10px] px-2 py-0.5 rounded font-bold">Shift ${sch.shift}</span></td>
+          <td class="p-3 font-mono">${sch.jam}</td>
+          <td class="p-3">${sch.note}</td>
+          ${isAdmin ? `
+            <td class="p-3 text-center">
+              <button onclick="deleteJadwal('${sch.id}')" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button>
+            </td>
+          ` : ''}
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function deleteJadwal(id) {
+      const db = loadDB();
+      db.schedules = db.schedules.filter(x => x.id !== id);
+      saveDB(db);
+      renderJadwalTable();
+    }
+
+    /* ==========================================================================
+       14. DASHBOARD CHARTS & REFRESH LOGIC
+       ========================================================================== */
+    let chartTrend = null;
+    let chartStatus = null;
+
+    function initDashboardCharts() {
+      const db = loadDB();
+
+      // Hitung Metrik Hari Ini
+      const totalSatpam = db.satpam.length;
+      const todayStr = new Date().toISOString().split('T')[0];
+      const todayAtt = db.attendance.filter(a => a.tanggal === todayStr);
+
+      const hadir = todayAtt.filter(a => a.status === 'HADIR').length;
+      const telat = todayAtt.filter(a => a.status === 'TERLAMBAT').length;
+      const izin = db.izins.filter(i => i.status === 'Disetujui').length;
+      const belumPulang = todayAtt.filter(a => a.jamMasuk && !a.jamPulang).length;
+      const alpa = Math.max(0, totalSatpam - (hadir + telat + izin));
+
+      document.getElementById('metricTotalSatpam').innerText = totalSatpam;
+      document.getElementById('metricHadir').innerText = hadir;
+      document.getElementById('metricTerlambat').innerText = telat;
+      document.getElementById('metricIzin').innerText = izin;
+      document.getElementById('metricAlpa').innerText = alpa;
+      document.getElementById('metricBelumPulang').innerText = belumPulang;
+
+      // Render Live Table in Dashboard
+      const dashTbody = document.getElementById('dashboardLiveTableBody');
+      dashTbody.innerHTML = '';
+      todayAtt.forEach(a => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="p-3 font-bold">${a.nama}</td>
+          <td class="p-3">${a.shift}</td>
+          <td class="p-3 text-emerald-700 font-bold">${a.jamMasuk || '-'}</td>
+          <td class="p-3">${a.jamPulang || '<span class="text-amber-600 font-bold">Sedang Tugas</span>'}</td>
+          <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${a.status === 'HADIR' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${a.status}</span></td>
+          <td class="p-3">${a.keterlambatan ? a.keterlambatan + ' Menit' : '-'}</td>
+          <td class="p-3">${a.fotoMasuk ? `<img src="${a.fotoMasuk}" class="w-6 h-6 rounded-full object-cover">` : '-'}</td>
+        `;
+        dashTbody.appendChild(row);
+      });
+
+      // Chart 1: Trend 7 Hari
+      const ctxTrend = document.getElementById('attendanceTrendChart').getContext('2d');
+      if (chartTrend) chartTrend.destroy();
+      chartTrend = new Chart(ctxTrend, {
+        type: 'line',
+        data: {
+          labels: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'],
+          datasets: [
+            {
+              label: 'Hadir Tepat Waktu',
+              data: [3, 3, 2, 3, 3, 2, hadir],
+              borderColor: '#10B981',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              tension: 0.3,
+              fill: true
+            },
+            {
+              label: 'Terlambat',
+              data: [0, 1, 0, 0, 1, 0, telat],
+              borderColor: '#F59E0B',
+              backgroundColor: 'rgba(245, 158, 11, 0.1)',
+              tension: 0.3,
+              fill: true
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } },
+          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+      });
+
+      // Chart 2: Donut Status
+      const ctxStatus = document.getElementById('attendanceStatusChart').getContext('2d');
+      if (chartStatus) chartStatus.destroy();
+      chartStatus = new Chart(ctxStatus, {
+        type: 'doughnut',
+        data: {
+          labels: ['Hadir', 'Terlambat', 'Izin', 'Tidak Hadir'],
+          datasets: [{
+            data: [hadir || 1, telat, izin, alpa],
+            backgroundColor: ['#10B981', '#F59E0B', '#3B82F6', '#EF4444']
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } }
+        }
+      });
+    }
+
+    /* ==========================================================================
+       15. EXPORT LAPORAN KE EXCEL & PDF
+       ========================================================================== */
+    function exportAttendanceXLSX() {
+      const db = loadDB();
+      const exportData = db.attendance.map(a => ({
+        'Tanggal': a.tanggal,
+        'Nama Satpam': a.nama,
+        'Shift': a.shift,
+        'Jam Masuk': a.jamMasuk,
+        'Jam Pulang': a.jamPulang || '-',
+        'Status': a.status,
+        'Keterlambatan (Menit)': a.keterlambatan,
+        'Keterangan': a.keterangan
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Rekap Presensi");
+      XLSX.writeFile(wb, `SIMPAT_Presensi_SMAN1Manonjaya_${new Date().toISOString().split('T')[0]}.xlsx`);
+    }
+
+    function exportAttendancePDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const db = loadDB();
+
+      doc.setFontSize(14);
+      doc.text("SIMPAT - SMAN 1 MANONJAYA", 14, 15);
+      doc.setFontSize(9);
+      doc.text("Laporan Rekapitulasi Presensi & Disiplin Petugas Satpam", 14, 21);
+      doc.text(`Dicetak pada: ${new Date().toLocaleString('id-ID')}`, 14, 26);
+
+      const tableData = db.attendance.map(a => [
+        a.tanggal,
+        a.nama,
+        a.shift,
+        a.jamMasuk,
+        a.jamPulang || '-',
+        a.status,
+        a.keterlambatan ? `${a.keterlambatan} mnt` : '0 mnt'
+      ]);
+
+      doc.autoTable({
+        startY: 32,
+        head: [['Tanggal', 'Nama Personel', 'Shift', 'Masuk', 'Pulang', 'Status', 'Terlambat']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: { fillColor: [11, 25, 44] },
+        styles: { fontSize: 8 }
+      });
+
+      doc.save(`SIMPAT_Laporan_SMAN1Manonjaya_${new Date().toISOString().split('T')[0]}.pdf`);
+    }
+
+    /* ==========================================================================
+       16. SETTINGS & AUDIT LOG RENDER
+       ========================================================================== */
+    function renderAuditLogs() {
+      const db = loadDB();
+      const tbody = document.getElementById('auditTableBody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      db.auditLogs.slice(0, 50).forEach(log => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50';
+        tr.innerHTML = `
+          <td class="p-2 text-slate-400">${log.timestamp}</td>
+          <td class="p-2 font-bold text-brand-navy">${log.user}</td>
+          <td class="p-2 text-blue-700">${log.aktivitas}</td>
+          <td class="p-2 text-slate-600">${log.detail}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function saveGeoConfig() {
+      const db = loadDB();
+      db.config.schoolLat = parseFloat(document.getElementById('cfgLat').value);
+      db.config.schoolLng = parseFloat(document.getElementById('cfgLng').value);
+      db.config.radius = parseInt(document.getElementById('cfgRadius').value);
+      db.config.geoEnforce = document.getElementById('cfgGeoEnabled').checked;
+
+      saveDB(db);
+      logAudit('Update Pengaturan GPS', `Radius diubah menjadi ${db.config.radius} meter (Enforce: ${db.config.geoEnforce})`);
+      alert('Konfigurasi Geolocation berhasil disimpan!');
+    }
+
+    /* ==========================================================================
+       17. GENERAL HELPERS & LIFECYCLE
+       ========================================================================== */
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
+    }
+
+    function refreshAllTables() {
+      renderSatpamTable();
+      renderJadwalTable();
+      renderJurnalCards();
+      renderIncidentTable();
+      renderHandoverList();
+      renderIzinTable();
+      renderRekapTable();
+      renderAuditLogs();
+    }
+
+    // Inisiasi aplikasi saat DOM dimuat
+    document.addEventListener('DOMContentLoaded', () => {
+      checkSession();
+    });
+  </script>
+</body>
+</html>
